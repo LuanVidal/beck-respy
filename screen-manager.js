@@ -41,8 +41,8 @@ class ScreenManager {
             matricula: this.matricula,
             mac: this.mec,
             ordemProducao: this.ordemproducao,
-            atividade: this.id, // Substitua com o valor correto
-            material: this.consumivel    // Substitua com o valor correto
+            atividade: this.id, 
+            material: this.consumivel   
           };
 
           try {
@@ -51,6 +51,8 @@ class ScreenManager {
 
             if (response) {
               console.log('Requisição bem-sucedida:', response);
+              this.currentScreen = "rastreabilidade";
+              this.changeScreenTo('rastreabilidade');
               this.io.emit('changepath', 'rastreabilidade');
 
             } else {
@@ -74,13 +76,34 @@ class ScreenManager {
         }
       },
       'rastreabilidade': {
-        action: () => {
-          this.sendDataToServer('telaRastreabilidade1', 'Dados da rastreabilidade 1');
+        'action': () => {
+          this.sendDataToServer('telaRastreabilidade', 'telaRastreabilidade');
+          this.sendDataToServer('parameters', { Corrente: 0, Tensao: 0 });
+      
+          // Verifica se há um intervalo existente e o limpa
+          if (this.intervalId) {
+            clearInterval(this.intervalId);
+          }
+      
+          // Configura o temporizador para enviar dados a cada segundo
+          this.intervalId = setInterval(() => {
+            if (this.currentScreen === 'pausa') {
+              // Se a tela atual for 'pausa', interrompe o temporizador
+              clearInterval(this.intervalId);
+            } else {
+              // Gera valores aleatórios para Corrente e Tensão (substitua com a lógica desejada)
+              const corrente = Math.floor(Math.random() * 601); // De 0 a 600
+              const tensao = Math.floor(Math.random() * 101); // De 0 a 100
+      
+              // Envia os dados atualizados
+              this.io.emit('parameters', { Corrente: corrente, Tensao: tensao });
+            }
+          }, 1000);
         }
       },
       'finaliza': {
         action: () => {
-          this.sendDataToServer('finalizaProcesso', 'Finalizando o processo');
+          this.sendDataToServer('finalizaProcesso', 'finalizaProcesso');
         }
       }
     };
@@ -109,7 +132,7 @@ class ScreenManager {
 
   async fazerRequisicaoHTTP(host, port, endpoint, requestBody) {
     const url = `https://${host}:${port}${endpoint}`;
-
+  
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -118,15 +141,31 @@ class ScreenManager {
         },
         body: JSON.stringify(requestBody),
       });
-
-      const data = await response.json();
-
-      return {
-        status: response.status,
-        data: data,
-      };
+  
+      const textResponse = await response.text();
+      console.log('Response from server:', textResponse);
+  
+      if (response.ok) {
+        try {
+          const data = JSON.parse(textResponse);
+          return {
+            status: response.status,
+            data: data,
+          };
+        } catch (jsonError) {
+          // Ignore JSON parsing error, proceed with text response
+          console.error('Error parsing JSON:', jsonError);
+          return {
+            status: response.status,
+            data: textResponse,
+          };
+        }
+      } else {
+        console.error('Error in request:', textResponse);
+        throw new Error(textResponse);
+      }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
+      console.error('Error in request:', error.message);
       throw error;
     }
   }
@@ -164,10 +203,23 @@ class ScreenManager {
         this.handleDelete();
         break;
       case '*':
-        this.handleBack();
+        if (this.currentScreen === 'rastreabilidade') {
+          this.handleNext();
+        } else {
+          this.handleBack();
+        }
         break;
       case '#':
-        this.handleNext();
+        if (this.currentScreen === 'rastreabilidade') { // ação de pausar
+          this.io.emit('rastreabilidade', 'pausa');
+          this.currentScreen = "pausa";
+
+        } else if(this.currentScreen === 'pausa'){ //ação de iniciar
+          this.io.emit('rastreabilidade', 'inicia');
+          this.currentScreen = "rastreabilidade";
+        } else{
+          this.handleNext();
+        }
         break;
       default:
         this.handleCharacter(key);
@@ -184,9 +236,20 @@ class ScreenManager {
   }
 
   handleBack() {
-    const previousScreen = this.getPreviousScreen();
-    if (previousScreen !== null) {
-      this.changeScreenTo(previousScreen);
+    const screenOrder = Object.keys(this.screens);
+    const currentIndex = screenOrder.indexOf(this.currentScreen);
+  
+    if (currentIndex > 0) {
+      const previousScreen = screenOrder[currentIndex - 1];
+      this.currentScreen = previousScreen;
+      this.io.emit('changepath', previousScreen);
+      console.log(this.currentScreen);
+      this.logVariableValues()
+      this.screens[this.currentScreen].action();
+      return previousScreen;
+    } else {
+      // Se já estiver na primeira tela, não há tela anterior
+      return null;
     }
   }
 
