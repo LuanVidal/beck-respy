@@ -4,9 +4,12 @@ class ScreenManager {
     this.ordemproducao = '';
     this.id = '';
     this.consumivel = '';
-    this.currentScreen = 'matricula';
+    this.currentScreen = 'home';
     this.mec = '8C:AA:B5:6A:78:F0';
     this.io = io;
+
+    this.initialize();
+
     this.screens = {
       'home': {
         action: () => {
@@ -51,6 +54,7 @@ class ScreenManager {
 
             if (response) {
               console.log('Requisição bem-sucedida:', response);
+              this.showPopup('Sucesso', 'Rastreabilidade Iniciada com Sucesso', 'success');
               this.currentScreen = "rastreabilidade";
               this.changeScreenTo('rastreabilidade');
               this.io.emit('changepath', 'rastreabilidade');
@@ -113,6 +117,52 @@ class ScreenManager {
     this.io = io;
   }
 
+  async initialize() {
+    // Faça uma requisição HTTP na tela 'home'
+    try {
+      const success = await this.makeHttpRequestOnHome();
+      
+      if (success) {
+        // Se a requisição for bem-sucedida, avança para a tela 'matricula'
+        this.currentScreen = 'matricula';
+        this.screens[this.currentScreen].action();
+        this.io.emit('changepath', 'matricula');
+      } else {
+        // Se a requisição falhar, mostra uma mensagem de erro e tenta novamente
+        this.showPopup('ERRO', 'Erro na requisição. Tente novamente.', 'error');
+        setTimeout(() => this.initialize(), 2000); // Tenta novamente após 2 segundos
+      }
+    } catch (error) {
+      console.error('Erro na inicialização:', error);
+      this.showPopup('ERRO', 'Erro na inicialização. Tente novamente.', 'error');
+      setTimeout(() => this.initialize(), 2000); // Tenta novamente após 2 segundos
+    }
+  }
+
+  async makeHttpRequestOnHome() {
+    // Lógica da sua requisição HTTP na tela 'home'
+    const requestBody = {
+      mac: this.mec
+    };
+
+    try {
+      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/status', requestBody);
+  
+      if (response) {
+        console.log('Requisição bem-sucedida:', response.data);
+        return true;
+      } else {
+        console.error('Erro na requisição:', response);
+        this.lastError = 'Erro desconhecido na requisição.';
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro na requisição:', error.message);
+      this.lastError = error.message;
+      return false;
+    }
+  }
+
   resetVariables() {
     this.matricula = '';
     this.ordemproducao = '';
@@ -132,7 +182,7 @@ class ScreenManager {
 
   async fazerRequisicaoHTTP(host, port, endpoint, requestBody) {
     const url = `https://${host}:${port}${endpoint}`;
-  
+    
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -153,7 +203,7 @@ class ScreenManager {
             data: data,
           };
         } catch (jsonError) {
-          // Ignore JSON parsing error, proceed with text response
+          // Se não for possível fazer o parsing como JSON, retorna apenas o texto
           console.error('Error parsing JSON:', jsonError);
           return {
             status: response.status,
@@ -169,6 +219,7 @@ class ScreenManager {
       throw error;
     }
   }
+  
 
   async fazerRequisicaoHTTPComValidacao(endpoint, requestBody) {
     try {
@@ -197,6 +248,86 @@ class ScreenManager {
     console.log('Tela Atual:', this.currentScreen);
   }
 
+  async pausarRastreabilidade() {
+    const requestBody = {
+      mac: this.mec
+    };
+  
+    try {
+      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/pausaProcesso', requestBody);
+  
+      if (response) {
+        this.showPopup('Sucesso', 'Processo pausado com sucesso', 'success');
+        this.io.emit('rastreabilidade', 'pausa');
+        this.currentScreen = "pausa";
+        return true;
+      } else {
+        console.error('Erro na requisição:', response);
+        this.showPopup('ERRO', 'Erro ao pausar a rastreabilidade. Tente novamente.', 'error');
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro na requisição:', error.message);
+      this.showPopup('ERRO', 'Erro ao pausar a rastreabilidade. Tente novamente.', 'error');
+      return false;
+    }
+  }
+  
+  async reiniciarRastreabilidade() {
+    const requestBody = {
+      mac: this.mec
+    };
+  
+    try {
+      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/reiniciaProcesso', requestBody);
+  
+      if (response) {
+        console.log('Requisição bem-sucedida:', response.data);
+        this.showPopup('Sucesso', 'Processo reiniciado com sucesso', 'success');
+        this.io.emit('rastreabilidade', 'inicia');
+        this.currentScreen = "rastreabilidade";
+
+        return true;
+      } else {
+        console.error('Erro na requisição:', response);
+        this.showPopup('ERRO', 'Erro ao reiniciar a rastreabilidade. Tente novamente.', 'error');
+        return false;
+      }
+    } catch (error) {
+      console.error('Erro na requisição:', error.message);
+      this.showPopup('ERRO', 'Erro ao reiniciar a rastreabilidade. Tente novamente.', 'error');
+      return false;
+    }
+  }
+
+  async finalizarProcesso() {
+    const requestBody = {
+      matricula: this.matricula,
+      mac: this.mec,
+      ordemProducao: this.ordemproducao,
+      atividade: this.id, 
+      material: this.consumivel
+    };
+  
+    try {
+      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/terminoProcesso', requestBody);
+  
+      if (response) {
+        console.log('Requisição bem-sucedida:', response.data);
+        this.showPopup('Sucesso', 'Processo finalizado com sucesso.', 'success');
+        this.resetVariables();
+        this.currentScreen = 'matricula';
+        this.io.emit('changepath', 'matricula');
+      } else {
+        console.error('Erro na requisição:', response);
+        this.showPopup('ERRO', 'Erro ao finalizar o processo. Tente novamente.', 'error');
+      }
+    } catch (error) {
+      console.error('Erro na requisição:', error.message);
+      this.showPopup('ERRO', 'Erro ao finalizar o processo. Tente novamente.', 'error');
+    }
+  }
+
   handleKey(key) {
     switch (key) {
       case 'D':
@@ -211,13 +342,14 @@ class ScreenManager {
         break;
       case '#':
         if (this.currentScreen === 'rastreabilidade') { // ação de pausar
-          this.io.emit('rastreabilidade', 'pausa');
-          this.currentScreen = "pausa";
-
+          this.pausarRastreabilidade();
         } else if(this.currentScreen === 'pausa'){ //ação de iniciar
-          this.io.emit('rastreabilidade', 'inicia');
-          this.currentScreen = "rastreabilidade";
-        } else{
+          this.reiniciarRastreabilidade();
+        } else if (this.currentScreen === 'finaliza') {
+          // Ação específica para a tela 'finaliza'
+          this.finalizarProcesso();
+        
+        } else {
           this.handleNext();
         }
         break;
@@ -226,6 +358,7 @@ class ScreenManager {
         break;
     }
   }
+
 
   handleDelete() {
     if (this[this.currentScreen] !== '') {
