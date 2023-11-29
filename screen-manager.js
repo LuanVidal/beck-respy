@@ -1,3 +1,5 @@
+const fs = require('fs')
+
 class ScreenManager {
   constructor(io) {
     this.matricula = '';
@@ -14,6 +16,11 @@ class ScreenManager {
       'home': {
         action: () => {
           this.sendDataToServer('carregamento', 'Carregando...');
+        }
+      },
+      'retoma': {
+        action: () => {
+          this.sendDataToServer('retoma', 'retoma');
         }
       },
       'matricula': {
@@ -117,16 +124,80 @@ class ScreenManager {
     this.io = io;
   }
 
+  saveConfigurationToFile() {
+    const configData = {
+      matricula: this.matricula,
+      ordemproducao: this.ordemproducao,
+      id: this.id,
+      consumivel: this.consumivel,
+    };
+
+    const configFilePath = 'config.json';
+
+    fs.writeFileSync(configFilePath, JSON.stringify(configData), 'utf-8');
+    console.log('Configurações salvas em', configFilePath);
+  }
+
+  loadConfigurationFromFile() {
+    const configFilePath = 'config.json';
+
+    try {
+      // Verifica se o arquivo existe
+      if (fs.existsSync(configFilePath)) {
+        const configData = fs.readFileSync(configFilePath, 'utf-8');
+
+        // Verifica se o arquivo está vazio
+        if (configData.trim() === '') {
+          console.log('Arquivo de configuração vazio. Direcionando para tela de matrícula.');
+          this.currentScreen = 'matricula';
+          this.screens[this.currentScreen].action();
+          this.io.emit('changepath', 'matricula');
+          return;
+        }
+
+        const parsedConfig = JSON.parse(configData);
+
+        this.matricula = parsedConfig.matricula || '';
+        this.ordemproducao = parsedConfig.ordemproducao || '';
+        this.id = parsedConfig.id || '';
+        this.consumivel = parsedConfig.consumivel || '';
+
+        console.log('Configurações carregadas do arquivo', configFilePath);
+
+        // Se o arquivo não estiver vazio, envie os dados retomados através do io.emit
+        const retomaObject = {
+          matricula: this.matricula,
+          ordemProd: this.ordemproducao,
+          id: this.id,
+          consumivel: this.consumivel,
+          tempoPercorrido: "10",
+		      tempoInicial: "10"
+        };
+        
+        this.io.emit('changepath', 'retoma');
+        this.currentScreen = "retoma"
+        this.io.emit('retoma', retomaObject);
+        
+      } else {
+        console.log('Arquivo de configuração não encontrado. Direcionando para tela de matrícula.');
+        this.currentScreen = 'matricula';
+        this.screens[this.currentScreen].action();
+        this.io.emit('changepath', 'matricula');
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações do arquivo', configFilePath);
+    }
+  }
+
   async initialize() {
     // Faça uma requisição HTTP na tela 'home'
     try {
       const success = await this.makeHttpRequestOnHome();
-      
+
       if (success) {
-        // Se a requisição for bem-sucedida, avança para a tela 'matricula'
-        this.currentScreen = 'matricula';
-        this.screens[this.currentScreen].action();
-        this.io.emit('changepath', 'matricula');
+        // Se a requisição for bem-sucedida, carrega as configurações do arquivo
+        this.loadConfigurationFromFile();
+
       } else {
         // Se a requisição falhar, mostra uma mensagem de erro e tenta novamente
         this.showPopup('ERRO', 'Erro na requisição. Tente novamente.', 'error');
@@ -308,7 +379,9 @@ class ScreenManager {
       atividade: this.id, 
       material: this.consumivel
     };
-  
+    
+    this.saveConfigurationToFile();
+
     try {
       const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/terminoProcesso', requestBody);
   
@@ -316,8 +389,7 @@ class ScreenManager {
         console.log('Requisição bem-sucedida:', response.data);
         this.showPopup('Sucesso', 'Processo finalizado com sucesso.', 'success');
         this.resetVariables();
-        this.currentScreen = 'matricula';
-        this.io.emit('changepath', 'matricula');
+        this.loadConfigurationFromFile();
       } else {
         console.error('Erro na requisição:', response);
         this.showPopup('ERRO', 'Erro ao finalizar o processo. Tente novamente.', 'error');
@@ -336,6 +408,18 @@ class ScreenManager {
       case '*':
         if (this.currentScreen === 'rastreabilidade') {
           this.handleNext();
+        } else if(this.currentScreen === 'matricula'){
+          
+        } else if(this.currentScreen === 'retoma'){
+
+          this.matricula = '';
+          this.ordemproducao = '';
+          this.id = '';
+          this.consumivel = '';
+
+          this.currentScreen = 'matricula';
+          this.screens[this.currentScreen].action();
+          this.io.emit('changepath', 'matricula');
         } else {
           this.handleBack();
         }
@@ -346,8 +430,12 @@ class ScreenManager {
         } else if(this.currentScreen === 'pausa'){ //ação de iniciar
           this.reiniciarRastreabilidade();
         } else if (this.currentScreen === 'finaliza') {
-          // Ação específica para a tela 'finaliza'
           this.finalizarProcesso();
+        
+        } else if (this.currentScreen === 'retoma') {
+          this.currentScreen = "validando";
+          this.io.emit('changepath', "validando");
+          this.screens["validando"].action()
         
         } else {
           this.handleNext();
