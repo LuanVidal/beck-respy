@@ -1,41 +1,39 @@
-const express = require('express');
+const express = require("express");
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, {
+const http = require("http").createServer(app);
+const io = require("socket.io")(http, {
   cors: {
-    origin: "http://localhost:8080"
-  }
+    origin: "http://localhost:8080",
+  },
 });
-const readline = require('readline');
-const ScreenManager = require('./screen-manager');
+const readline = require("readline");
+const ScreenManager = require("./screen-manager");
 
 const rl = readline.createInterface({
   input: process.stdin,
-  output: process.stdout
+  output: process.stdout,
 });
 
-app.use(express.static('public'));
+app.use(express.static("public"));
 
-io.on('connection', (socket) => {
-  console.log('Servidor conectado');
+io.on("connection", (socket) => {
+  console.log("Servidor conectado");
 
-  socket.on('disconnect', () => {
-    console.log('Servidor desconectado');
+  socket.on("disconnect", () => {
+    console.log("Servidor desconectado");
   });
 
   const screenManager = new ScreenManager(io);
 
   function getUserInput() {
-    rl.question('mensagem para enviar: ', (msg) => {
-      if (msg === 'q') {
-        rl.close();
-        return; // Sair do loop quando o usuário digitar "q"
-      }
+    readline.emitKeypressEvents(process.stdin);
+    process.stdin.setRawMode(true);
 
-      screenManager.handleKey(msg);
-
-      // Chamar a função novamente para permitir a entrada contínua
-      getUserInput();
+    process.stdin.on("keypress", (char, evt) => {
+      console.log("Key pressed");
+      console.log("Char:", JSON.stringify(char), "Evt:", JSON.stringify(evt));
+      if (char === "q") process.exit();
+      screenManager.handleKey(char);
     });
   }
 
