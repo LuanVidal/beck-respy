@@ -1,122 +1,135 @@
-const fs = require('fs')
+const fs = require("fs");
 
 class ScreenManager {
   constructor(io) {
-    this.matricula = '';
-    this.ordemproducao = '';
-    this.id = '';
-    this.consumivel = '';
-    this.currentScreen = 'home';
-    this.mec = '8C:AA:B5:6A:78:F0';
+    this.matricula = "";
+    this.ordemproducao = "";
+    this.id = "";
+    this.consumivel = "";
+    this.currentScreen = "home";
+    this.mec = "8C:AA:B5:6A:78:F0";
     this.io = io;
 
     this.initialize();
 
     this.screens = {
-      'home': {
+      home: {
         action: () => {
-          this.sendDataToServer('carregamento', 'Carregando...');
-        }
+          this.sendDataToServer("carregamento", "Carregando...");
+        },
       },
-      'retoma': {
+      retoma: {
         action: () => {
-          this.sendDataToServer('retoma', 'retoma');
-        }
+          this.sendDataToServer("retoma", "retoma");
+        },
       },
-      'matricula': {
+      matricula: {
         action: () => {
-          this.sendDataToServer('matricula', this.matricula);
-        }
+          this.sendDataToServer("matricula", this.matricula);
+        },
       },
-      'ordemproducao': {
+      ordemproducao: {
         action: () => {
-          this.sendDataToServer('ordemProducao', this.ordemproducao);
+          this.sendDataToServer("ordemProducao", this.ordemproducao);
           console.log("DENTRO DA ORDEM");
-        }
+        },
       },
-      'id': {
+      id: {
         action: () => {
-          this.sendDataToServer('idNumber', this.id);
-        }
+          this.sendDataToServer("idNumber", this.id);
+        },
       },
-      'consumivel': {
+      consumivel: {
         action: () => {
-          this.sendDataToServer('consumivel', this.consumivel);
-        }
+          this.sendDataToServer("consumivel", this.consumivel);
+        },
       },
-      'validando': {
+      validando: {
         action: async () => {
           console.log("VALIDANDO");
           const requestBody = {
             matricula: this.matricula,
             mac: this.mec,
             ordemProducao: this.ordemproducao,
-            atividade: this.id, 
-            material: this.consumivel   
+            atividade: this.id,
+            material: this.consumivel,
           };
 
           try {
-            const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/inicioProcesso', requestBody);
+            const response = await this.fazerRequisicaoHTTPComValidacao(
+              "/delp/arduino/inicioProcesso",
+              requestBody
+            );
             console.log(requestBody);
 
             if (response) {
-              console.log('Requisição bem-sucedida:', response);
-              this.showPopup('Sucesso', 'Rastreabilidade Iniciada com Sucesso', 'success');
+              console.log("Requisição bem-sucedida:", response);
+              this.showPopup(
+                "Sucesso",
+                "Rastreabilidade Iniciada com Sucesso",
+                "success"
+              );
               this.currentScreen = "rastreabilidade";
-              this.changeScreenTo('rastreabilidade');
-              this.io.emit('changepath', 'rastreabilidade');
-
+              this.changeScreenTo("rastreabilidade");
+              this.io.emit("changepath", "rastreabilidade");
             } else {
-              console.error('Erro na requisição:', this.lastError);
-              this.showPopup('ERRO', this.lastError.error, 'error');
+              console.error("Erro na requisição:", this.lastError);
+              this.showPopup("ERRO", this.lastError.error, "error");
 
               this.resetVariables();
 
               this.currentScreen = "matricula";
-              this.io.emit('changepath', 'matricula'); // Altere para a tela desejada em caso de falha
+              this.io.emit("changepath", "matricula"); // Altere para a tela desejada em caso de falha
             }
           } catch (error) {
-            console.error('Erro na requisição:', this.lastError);
-            this.showPopup('Erro', 'Erro na requisição. Tente novamente.', 'error');
+            console.error("Erro na requisição:", this.lastError);
+            this.showPopup(
+              "Erro",
+              "Erro na requisição. Tente novamente.",
+              "error"
+            );
 
             resetVariables();
-              
+
             this.currentScreen = "matricula";
-            this.io.emit('changepath', 'matricula'); // Altere para a tela desejada em caso de falha
+            this.io.emit("changepath", "matricula"); // Altere para a tela desejada em caso de falha
           }
-        }
+        },
       },
-      'rastreabilidade': {
-        'action': () => {
-          this.sendDataToServer('telaRastreabilidade', 'telaRastreabilidade');
-          this.sendDataToServer('parameters', { Corrente: 0, Tensao: 0 });
-      
+      rastreabilidade: {
+        action: () => {
+          this.sendDataToServer("telaRastreabilidade", "telaRastreabilidade");
+          this.sendDataToServer("parameters", { Corrente: 0, Tensao: 0 });
+
           // Verifica se há um intervalo existente e o limpa
           if (this.intervalId) {
             clearInterval(this.intervalId);
           }
-      
+
           // Configura o temporizador para enviar dados a cada segundo
           this.intervalId = setInterval(() => {
-            if (this.currentScreen === 'pausa') {
+            if (this.currentScreen === "pausa") {
               // Se a tela atual for 'pausa', interrompe o temporizador
               clearInterval(this.intervalId);
             } else {
               // Gera valores aleatórios para Corrente e Tensão (substitua com a lógica desejada)
               const corrente = Math.floor(Math.random() * 601); // De 0 a 600
               const tensao = Math.floor(Math.random() * 101); // De 0 a 100
-      
+
               // Envia os dados atualizados
-              this.io.emit('parameters', { Corrente: corrente, Tensao: tensao });
+              this.io.emit("parameters", {
+                Corrente: corrente,
+                Tensao: tensao,
+              });
             }
           }, 1000);
-        }
+        },
       },
-      'finaliza': {
+      finaliza: {
         action: () => {
-          this.sendDataToServer('finalizaProcesso', 'finalizaProcesso');
-        }
-      }
+          this.sendDataToServer("finalizaProcesso", "finalizaProcesso");
+        },
+      },
     };
   }
 
@@ -132,37 +145,39 @@ class ScreenManager {
       consumivel: this.consumivel,
     };
 
-    const configFilePath = 'config.json';
+    const configFilePath = "config.json";
 
-    fs.writeFileSync(configFilePath, JSON.stringify(configData), 'utf-8');
-    console.log('Configurações salvas em', configFilePath);
+    fs.writeFileSync(configFilePath, JSON.stringify(configData), "utf-8");
+    console.log("Configurações salvas em", configFilePath);
   }
 
   loadConfigurationFromFile() {
-    const configFilePath = 'config.json';
+    const configFilePath = "config.json";
 
     try {
       // Verifica se o arquivo existe
       if (fs.existsSync(configFilePath)) {
-        const configData = fs.readFileSync(configFilePath, 'utf-8');
+        const configData = fs.readFileSync(configFilePath, "utf-8");
 
         // Verifica se o arquivo está vazio
-        if (configData.trim() === '') {
-          console.log('Arquivo de configuração vazio. Direcionando para tela de matrícula.');
-          this.currentScreen = 'matricula';
+        if (configData.trim() === "") {
+          console.log(
+            "Arquivo de configuração vazio. Direcionando para tela de matrícula."
+          );
+          this.currentScreen = "matricula";
           this.screens[this.currentScreen].action();
-          this.io.emit('changepath', 'matricula');
+          this.io.emit("changepath", "matricula");
           return;
         }
 
         const parsedConfig = JSON.parse(configData);
 
-        this.matricula = parsedConfig.matricula || '';
-        this.ordemproducao = parsedConfig.ordemproducao || '';
-        this.id = parsedConfig.id || '';
-        this.consumivel = parsedConfig.consumivel || '';
+        this.matricula = parsedConfig.matricula || "";
+        this.ordemproducao = parsedConfig.ordemproducao || "";
+        this.id = parsedConfig.id || "";
+        this.consumivel = parsedConfig.consumivel || "";
 
-        console.log('Configurações carregadas do arquivo', configFilePath);
+        console.log("Configurações carregadas do arquivo", configFilePath);
 
         // Se o arquivo não estiver vazio, envie os dados retomados através do io.emit
         const retomaObject = {
@@ -171,21 +186,27 @@ class ScreenManager {
           id: this.id,
           consumivel: this.consumivel,
           tempoPercorrido: "10",
-		      tempoInicial: "10"
+          tempoInicial: "10",
         };
-        
-        this.io.emit('changepath', 'retoma');
-        this.currentScreen = "retoma"
-        this.io.emit('retoma', retomaObject);
-        
+
+        this.io.emit("changepath", "retoma");
+        this.currentScreen = "retoma";
+        setTimeout(() => {
+          this.io.emit("retoma-params", retomaObject);
+        }, 200);
       } else {
-        console.log('Arquivo de configuração não encontrado. Direcionando para tela de matrícula.');
-        this.currentScreen = 'matricula';
+        console.log(
+          "Arquivo de configuração não encontrado. Direcionando para tela de matrícula."
+        );
+        this.currentScreen = "matricula";
         this.screens[this.currentScreen].action();
-        this.io.emit('changepath', 'matricula');
+        this.io.emit("changepath", "matricula");
       }
     } catch (error) {
-      console.error('Erro ao carregar configurações do arquivo', configFilePath);
+      console.error(
+        "Erro ao carregar configurações do arquivo",
+        configFilePath
+      );
     }
   }
 
@@ -197,15 +218,18 @@ class ScreenManager {
       if (success) {
         // Se a requisição for bem-sucedida, carrega as configurações do arquivo
         this.loadConfigurationFromFile();
-
       } else {
         // Se a requisição falhar, mostra uma mensagem de erro e tenta novamente
-        this.showPopup('ERRO', 'Erro na requisição. Tente novamente.', 'error');
+        this.showPopup("ERRO", "Erro na requisição. Tente novamente.", "error");
         setTimeout(() => this.initialize(), 2000); // Tenta novamente após 2 segundos
       }
     } catch (error) {
-      console.error('Erro na inicialização:', error);
-      this.showPopup('ERRO', 'Erro na inicialização. Tente novamente.', 'error');
+      console.error("Erro na inicialização:", error);
+      this.showPopup(
+        "ERRO",
+        "Erro na inicialização. Tente novamente.",
+        "error"
+      );
       setTimeout(() => this.initialize(), 2000); // Tenta novamente após 2 segundos
     }
   }
@@ -213,59 +237,61 @@ class ScreenManager {
   async makeHttpRequestOnHome() {
     // Lógica da sua requisição HTTP na tela 'home'
     const requestBody = {
-      mac: this.mec
+      mac: this.mec,
     };
 
     try {
-      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/status', requestBody);
-  
+      const response = await this.fazerRequisicaoHTTPComValidacao(
+        "/delp/arduino/status",
+        requestBody
+      );
+
       if (response) {
-        console.log('Requisição bem-sucedida:', response.data);
+        console.log("Requisição bem-sucedida:", response.data);
         return true;
       } else {
-        console.error('Erro na requisição:', response);
-        this.lastError = 'Erro desconhecido na requisição.';
+        console.error("Erro na requisição:", response);
+        this.lastError = "Erro desconhecido na requisição.";
         return false;
       }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
+      console.error("Erro na requisição:", error.message);
       this.lastError = error.message;
       return false;
     }
   }
 
   resetVariables() {
-    this.matricula = '';
-    this.ordemproducao = '';
-    this.id = '';
-    this.consumivel = '';
+    this.matricula = "";
+    this.ordemproducao = "";
+    this.id = "";
+    this.consumivel = "";
   }
 
-  showPopup(title, text, type = 'error', time = 2000) {
-    this.io.emit('swal', {
+  showPopup(title, text, type = "error", time = 2000) {
+    this.io.emit("swal", {
       title: title,
       text: text,
       type: type,
-      time: time
+      time: time,
     });
   }
 
-
   async fazerRequisicaoHTTP(host, port, endpoint, requestBody) {
     const url = `https://${host}:${port}${endpoint}`;
-    
+
     try {
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(requestBody),
       });
-  
+
       const textResponse = await response.text();
-      console.log('Response from server:', textResponse);
-  
+      console.log("Response from server:", textResponse);
+
       if (response.ok) {
         try {
           const data = JSON.parse(textResponse);
@@ -275,98 +301,124 @@ class ScreenManager {
           };
         } catch (jsonError) {
           // Se não for possível fazer o parsing como JSON, retorna apenas o texto
-          console.error('Error parsing JSON:', jsonError);
+          console.error("Error parsing JSON:", jsonError);
           return {
             status: response.status,
             data: textResponse,
           };
         }
       } else {
-        console.error('Error in request:', textResponse);
+        console.error("Error in request:", textResponse);
         throw new Error(textResponse);
       }
     } catch (error) {
-      console.error('Error in request:', error.message);
+      console.error("Error in request:", error.message);
       throw error;
     }
   }
-  
 
   async fazerRequisicaoHTTPComValidacao(endpoint, requestBody) {
     try {
-      const response = await this.fazerRequisicaoHTTP("delp.tcsapp.com.br", 443, endpoint, requestBody);
+      const response = await this.fazerRequisicaoHTTP(
+        "delp.tcsapp.com.br",
+        443,
+        endpoint,
+        requestBody
+      );
 
       if (response.status === 200) {
-        console.log('Requisição bem-sucedida:', response.data);
+        console.log("Requisição bem-sucedida:", response.data);
         return true;
       } else {
-        console.error('Erro na requisição:', response.data);
+        console.error("Erro na requisição:", response.data);
         this.lastError = response.data;
         return false;
       }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
+      console.error("Erro na requisição:", error.message);
       this.lastError = error.message;
       return false;
     }
   }
 
   logVariableValues() {
-    console.log('Matrícula:', this.matricula);
-    console.log('Ordem de Produção:', this.ordemproducao);
-    console.log('ID Number:', this.id);
-    console.log('Consumível:', this.consumivel);
-    console.log('Tela Atual:', this.currentScreen);
+    console.log("Matrícula:", this.matricula);
+    console.log("Ordem de Produção:", this.ordemproducao);
+    console.log("ID Number:", this.id);
+    console.log("Consumível:", this.consumivel);
+    console.log("Tela Atual:", this.currentScreen);
   }
 
   async pausarRastreabilidade() {
     const requestBody = {
-      mac: this.mec
+      mac: this.mec,
     };
-  
+
     try {
-      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/pausaProcesso', requestBody);
-  
+      const response = await this.fazerRequisicaoHTTPComValidacao(
+        "/delp/arduino/pausaProcesso",
+        requestBody
+      );
+
       if (response) {
-        this.showPopup('Sucesso', 'Processo pausado com sucesso', 'success');
-        this.io.emit('rastreabilidade', 'pausa');
+        this.showPopup("Sucesso", "Processo pausado com sucesso", "success");
+        this.io.emit("rastreabilidade", "pausa");
         this.currentScreen = "pausa";
         return true;
       } else {
-        console.error('Erro na requisição:', response);
-        this.showPopup('ERRO', 'Erro ao pausar a rastreabilidade. Tente novamente.', 'error');
+        console.error("Erro na requisição:", response);
+        this.showPopup(
+          "ERRO",
+          "Erro ao pausar a rastreabilidade. Tente novamente.",
+          "error"
+        );
         return false;
       }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
-      this.showPopup('ERRO', 'Erro ao pausar a rastreabilidade. Tente novamente.', 'error');
+      console.error("Erro na requisição:", error.message);
+      this.showPopup(
+        "ERRO",
+        "Erro ao pausar a rastreabilidade. Tente novamente.",
+        "error"
+      );
       return false;
     }
   }
-  
+
   async reiniciarRastreabilidade() {
     const requestBody = {
-      mac: this.mec
+      mac: this.mec,
     };
-  
+
     try {
-      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/reiniciaProcesso', requestBody);
-  
+      const response = await this.fazerRequisicaoHTTPComValidacao(
+        "/delp/arduino/reiniciaProcesso",
+        requestBody
+      );
+
       if (response) {
-        console.log('Requisição bem-sucedida:', response.data);
-        this.showPopup('Sucesso', 'Processo reiniciado com sucesso', 'success');
-        this.io.emit('rastreabilidade', 'inicia');
+        console.log("Requisição bem-sucedida:", response.data);
+        this.showPopup("Sucesso", "Processo reiniciado com sucesso", "success");
+        this.io.emit("rastreabilidade", "inicia");
         this.currentScreen = "rastreabilidade";
 
         return true;
       } else {
-        console.error('Erro na requisição:', response);
-        this.showPopup('ERRO', 'Erro ao reiniciar a rastreabilidade. Tente novamente.', 'error');
+        console.error("Erro na requisição:", response);
+        this.showPopup(
+          "ERRO",
+          "Erro ao reiniciar a rastreabilidade. Tente novamente.",
+          "error"
+        );
         return false;
       }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
-      this.showPopup('ERRO', 'Erro ao reiniciar a rastreabilidade. Tente novamente.', 'error');
+      console.error("Erro na requisição:", error.message);
+      this.showPopup(
+        "ERRO",
+        "Erro ao reiniciar a rastreabilidade. Tente novamente.",
+        "error"
+      );
       return false;
     }
   }
@@ -376,67 +428,80 @@ class ScreenManager {
       matricula: this.matricula,
       mac: this.mec,
       ordemProducao: this.ordemproducao,
-      atividade: this.id, 
-      material: this.consumivel
+      atividade: this.id,
+      material: this.consumivel,
     };
-    
+
     this.saveConfigurationToFile();
 
     try {
-      const response = await this.fazerRequisicaoHTTPComValidacao('/delp/arduino/terminoProcesso', requestBody);
-  
+      const response = await this.fazerRequisicaoHTTPComValidacao(
+        "/delp/arduino/terminoProcesso",
+        requestBody
+      );
+
       if (response) {
-        console.log('Requisição bem-sucedida:', response.data);
-        this.showPopup('Sucesso', 'Processo finalizado com sucesso.', 'success');
+        console.log("Requisição bem-sucedida:", response.data);
+        this.showPopup(
+          "Sucesso",
+          "Processo finalizado com sucesso.",
+          "success"
+        );
         this.resetVariables();
         this.loadConfigurationFromFile();
       } else {
-        console.error('Erro na requisição:', response);
-        this.showPopup('ERRO', 'Erro ao finalizar o processo. Tente novamente.', 'error');
+        console.error("Erro na requisição:", response);
+        this.showPopup(
+          "ERRO",
+          "Erro ao finalizar o processo. Tente novamente.",
+          "error"
+        );
       }
     } catch (error) {
-      console.error('Erro na requisição:', error.message);
-      this.showPopup('ERRO', 'Erro ao finalizar o processo. Tente novamente.', 'error');
+      console.error("Erro na requisição:", error.message);
+      this.showPopup(
+        "ERRO",
+        "Erro ao finalizar o processo. Tente novamente.",
+        "error"
+      );
     }
   }
 
   handleKey(key) {
     switch (key) {
-      case 'D':
+      case "D":
         this.handleDelete();
         break;
-      case '*':
-        if (this.currentScreen === 'rastreabilidade') {
+      case "*":
+        if (this.currentScreen === "rastreabilidade") {
           this.handleNext();
-        } else if(this.currentScreen === 'matricula'){
-          
-        } else if(this.currentScreen === 'retoma'){
+        } else if (this.currentScreen === "matricula") {
+        } else if (this.currentScreen === "retoma") {
+          this.matricula = "";
+          this.ordemproducao = "";
+          this.id = "";
+          this.consumivel = "";
 
-          this.matricula = '';
-          this.ordemproducao = '';
-          this.id = '';
-          this.consumivel = '';
-
-          this.currentScreen = 'matricula';
+          this.currentScreen = "matricula";
           this.screens[this.currentScreen].action();
-          this.io.emit('changepath', 'matricula');
+          this.io.emit("changepath", "matricula");
         } else {
           this.handleBack();
         }
         break;
-      case '#':
-        if (this.currentScreen === 'rastreabilidade') { // ação de pausar
+      case "#":
+        if (this.currentScreen === "rastreabilidade") {
+          // ação de pausar
           this.pausarRastreabilidade();
-        } else if(this.currentScreen === 'pausa'){ //ação de iniciar
+        } else if (this.currentScreen === "pausa") {
+          //ação de iniciar
           this.reiniciarRastreabilidade();
-        } else if (this.currentScreen === 'finaliza') {
+        } else if (this.currentScreen === "finaliza") {
           this.finalizarProcesso();
-        
-        } else if (this.currentScreen === 'retoma') {
+        } else if (this.currentScreen === "retoma") {
           this.currentScreen = "validando";
-          this.io.emit('changepath', "validando");
-          this.screens["validando"].action()
-        
+          this.io.emit("changepath", "validando");
+          this.screens["validando"].action();
         } else {
           this.handleNext();
         }
@@ -447,9 +512,8 @@ class ScreenManager {
     }
   }
 
-
   handleDelete() {
-    if (this[this.currentScreen] !== '') {
+    if (this[this.currentScreen] !== "") {
       this[this.currentScreen] = this[this.currentScreen].slice(0, -1);
       this.screens[this.currentScreen].action();
     }
@@ -459,13 +523,13 @@ class ScreenManager {
   handleBack() {
     const screenOrder = Object.keys(this.screens);
     const currentIndex = screenOrder.indexOf(this.currentScreen);
-  
+
     if (currentIndex > 0) {
       const previousScreen = screenOrder[currentIndex - 1];
       this.currentScreen = previousScreen;
-      this.io.emit('changepath', previousScreen);
+      this.io.emit("changepath", previousScreen);
       console.log(this.currentScreen);
-      this.logVariableValues()
+      this.logVariableValues();
       this.screens[this.currentScreen].action();
       return previousScreen;
     } else {
@@ -479,21 +543,23 @@ class ScreenManager {
   }
 
   handleCharacter(key) {
-    console.log('Current Screen:', this.currentScreen);
+    console.log("Current Screen:", this.currentScreen);
     const maxDigits = {
       matricula: 5,
       ordemproducao: 7,
       id: 2,
       consumivel: 2,
     };
-  
-    if (this.currentScreen && this[this.currentScreen].length < maxDigits[this.currentScreen]) {
+
+    if (
+      this.currentScreen &&
+      this[this.currentScreen].length < maxDigits[this.currentScreen]
+    ) {
       this[this.currentScreen] += key;
       this.screens[this.currentScreen].action();
     }
     this.logVariableValues(); // Mostra os valores após a modificação
   }
-  
 
   sendDataToServer(param, msg) {
     this.io.emit(param, msg);
@@ -509,11 +575,11 @@ class ScreenManager {
   getPreviousScreen() {
     const screenOrder = Object.keys(this.screens);
     const currentIndex = screenOrder.indexOf(this.currentScreen);
-  
+
     if (currentIndex > 0) {
       const previousScreen = screenOrder[currentIndex - 1];
       this.currentScreen = previousScreen;
-      this.io.emit('keyboard', previousScreen);
+      this.io.emit("keyboard", previousScreen);
       console.log(this.currentScreen);
       return previousScreen;
     } else {
@@ -521,15 +587,15 @@ class ScreenManager {
       return null;
     }
   }
-  
+
   getNextScreen() {
     const screenOrder = Object.keys(this.screens);
     const currentIndex = screenOrder.indexOf(this.currentScreen);
-  
+
     if (currentIndex < screenOrder.length - 1) {
       const nextScreen = screenOrder[currentIndex + 1];
       this.currentScreen = nextScreen;
-      this.io.emit('changepath', nextScreen);
+      this.io.emit("changepath", nextScreen);
       console.log(this.currentScreen);
       return nextScreen;
     } else {
