@@ -14,7 +14,7 @@ const rl = readline.createInterface({
   output: process.stdout,
 });
 
-app.use(express.static("public"));
+app.use(express.static("dist"));
 
 io.on("connection", (socket) => {
   console.log("Servidor conectado");

@@ -191,9 +191,7 @@ class ScreenManager {
 
         this.io.emit("changepath", "retoma");
         this.currentScreen = "retoma";
-        setTimeout(() => {
-          this.io.emit("retoma-params", retomaObject);
-        }, 200);
+        this.io.emit("retoma-params", retomaObject);
       } else {
         console.log(
           "Arquivo de configuração não encontrado. Direcionando para tela de matrícula."
