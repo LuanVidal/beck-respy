@@ -8,6 +8,7 @@ const io = require("socket.io")(http, {
 });
 const readline = require("readline");
 const ScreenManager = require("./screen-manager");
+const { data } = require("./sensor");
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -23,7 +24,7 @@ io.on("connection", (socket) => {
     console.log("Servidor desconectado");
   });
 
-  const screenManager = new ScreenManager(io);
+  const screenManager = new ScreenManager(io, data);
 
   function getUserInput() {
     readline.emitKeypressEvents(process.stdin);
@@ -43,4 +44,5 @@ io.on("connection", (socket) => {
 const port = process.env.PORT || 3000;
 http.listen(port, () => {
   console.log(`Servidor Node.js rodando em http://localhost:${port}`);
+  startMeasurementLoop();
 });

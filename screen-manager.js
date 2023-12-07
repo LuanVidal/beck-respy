@@ -1,13 +1,14 @@
 const fs = require("fs");
 
 class ScreenManager {
-  constructor(io) {
+  constructor(io, data) {
     this.matricula = "";
     this.ordemproducao = "";
     this.id = "";
     this.consumivel = "";
     this.currentScreen = "home";
     this.mec = "8C:AA:B5:6A:78:F0";
+    this.data = data;
     this.io = io;
 
     this.initialize();
@@ -99,7 +100,7 @@ class ScreenManager {
       rastreabilidade: {
         action: () => {
           this.sendDataToServer("telaRastreabilidade", "telaRastreabilidade");
-          this.sendDataToServer("parameters", { Corrente: 0, Tensao: 0 });
+          this.sendDataToServer("parameters", { Corrente: this.data.correnteAnterior, Tensao: this.data.tensaoAnterior });
 
           // Verifica se há um intervalo existente e o limpa
           if (this.intervalId) {
@@ -112,14 +113,10 @@ class ScreenManager {
               // Se a tela atual for 'pausa', interrompe o temporizador
               clearInterval(this.intervalId);
             } else {
-              // Gera valores aleatórios para Corrente e Tensão (substitua com a lógica desejada)
-              const corrente = Math.floor(Math.random() * 601); // De 0 a 600
-              const tensao = Math.floor(Math.random() * 101); // De 0 a 100
-
               // Envia os dados atualizados
               this.io.emit("parameters", {
-                Corrente: corrente,
-                Tensao: tensao,
+                Corrente: this.data.correnteAnterior,
+                Tensao: this.data.tensaoAnterior,
               });
             }
           }, 1000);
