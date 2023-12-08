@@ -68,6 +68,11 @@ const checkInternet = () => {
   });
 };
 
+const data = {
+  tensaoAnterior: 0,
+  correnteAnterior: 0,
+};
+
 const sendToAMQP = async (idVariavel, valor, dataHora) => {
   try {
     if (!amqpChannelInfo || !isAMQPConnected) {
@@ -162,7 +167,7 @@ const startMeasurementLoop = async () => {
       sendToAMQP(ID_TENSAO, tensaoAnterior, timestamp);
       sendToAMQP(ID_CORRENTE, correnteAnterior, timestamp);
 
-      console.log(`Tensão: ${tensaoAnterior}, Corrente: ${correnteAnterior}`);
+      //console.log(`Tensão: ${tensaoAnterior}, Corrente: ${correnteAnterior}`);
       await sleep(25); // Atraso de 25 milissegundos
 
     } catch (error) {
