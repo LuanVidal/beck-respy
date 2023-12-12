@@ -1,11 +1,8 @@
 const express = require("express");
 const app = express();
 const http = require("http").createServer(app);
-const io = require("socket.io")(http, {
-  cors: {
-    origin: "http://localhost:8080",
-  },
-});
+const io = require("socket.io")(http);
+const puppeteer = require("puppeteer-core");
 const ScreenManager = require("./screen-manager");
 const { startMeasurementLoop, data } = require("./sensor");
 
@@ -31,6 +28,21 @@ io.on("connection", (socket) => {
 });
 
 const port = process.env.PORT || 3000;
-http.listen(port, () => {
+http.listen(port, async () => {
   console.log(`Servidor Node.js rodando em http://localhost:${port}`);
+
+  // Abre o Chromium em tela cheia
+  const browser = await puppeteer.launch({
+    executablePath: "/usr/bin/chromium-browser",
+    headless: false,
+    args: ["--start-fullscreen",
+    "--no-sandbox",
+    "--disable-gpu",
+    "--disable-infobars",
+    "--start-maximized",
+    "--app=http://localhost:3000/",
+    "--user-data-dir=/tmp/puppeteer_user_data",
+    "--disable-blink-features=AutomationControlled",],
+  });
+
 });

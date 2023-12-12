@@ -539,22 +539,34 @@ class ScreenManager {
 
   handleCharacter(key) {
     console.log("Current Screen:", this.currentScreen);
+
+    // Lista de telas que não devem aceitar números
+    const screensWithoutNumbers = ["retoma", "rastreabilidade", "finaliza"];
+
+    // Verifica se a tela atual não aceita números
+    if (screensWithoutNumbers.includes(this.currentScreen)) {
+        console.log(`A tela ${this.currentScreen} não aceita números.`);
+        return;
+    }
+
     const maxDigits = {
-      matricula: 5,
-      ordemproducao: 7,
-      id: 2,
-      consumivel: 2,
+        matricula: 5,
+        ordemproducao: 7,
+        id: 2,
+        consumivel: 2,
     };
 
+    // Verifica se a propriedade está definida antes de acessá-la
     if (
-      this.currentScreen &&
-      this[this.currentScreen].length < maxDigits[this.currentScreen]
+        this.currentScreen &&
+        this[this.currentScreen] &&
+        this[this.currentScreen].length < maxDigits[this.currentScreen]
     ) {
-      this[this.currentScreen] += key;
-      this.screens[this.currentScreen].action();
+        this[this.currentScreen] += key;
+        this.screens[this.currentScreen].action();
     }
     this.logVariableValues(); // Mostra os valores após a modificação
-  }
+}
 
   sendDataToServer(param, msg) {
     this.io.emit(param, msg);

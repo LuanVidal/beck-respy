@@ -141,7 +141,7 @@ const startMeasurementLoop = async () => {
 
       if (tensaoMapeada <= 100) {
         if (tensaoAnterior + 100 * FILTRO < tensaoMapeada || tensaoAnterior - 100 * FILTRO > tensaoMapeada) {
-          tensaoAnterior = tensaoMapeada;
+          tensaoAnterior = parseFloat(tensaoMapeada.toFixed(2));
         }
       } else {
         tensaoAnterior = 100;
@@ -153,7 +153,7 @@ const startMeasurementLoop = async () => {
 
       if (correnteMapeada <= 600) {
         if (correnteAnterior + 600 * FILTRO < correnteMapeada || correnteAnterior - 600 * FILTRO > correnteMapeada) {
-          correnteAnterior = correnteMapeada;
+          correnteAnterior = parseFloat(correnteMapeada.toFixed(2));
         }
       } else {
         correnteAnterior = 600;
@@ -173,8 +173,8 @@ const startMeasurementLoop = async () => {
     } catch (error) {
       console.error('Erro ao realizar medição:', error);
       // Se ocorrer um erro, coloque a mensagem no buffer
-      buffer.push({ idVariavel: ID_TENSAO, valor: tensaoAnterior, dataHora: Date.now() });
-      buffer.push({ idVariavel: ID_CORRENTE, valor: correnteAnterior, dataHora: Date.now() });
+      buffer.push({ idVariavel: ID_TENSAO, valor: parseFloat(tensaoAnterior.toFixed(2)), dataHora: Date.now() });
+      buffer.push({ idVariavel: ID_CORRENTE, valor: parseFloat(correnteAnterior.toFixed(2)), dataHora: Date.now() });
     }
   }
 };
