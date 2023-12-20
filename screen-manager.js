@@ -464,7 +464,7 @@ class ScreenManager {
 
   handleKey(key) {
     switch (key) {
-      case "D":
+      case "-":
         this.handleDelete();
         break;
       case "*":
@@ -484,7 +484,7 @@ class ScreenManager {
           this.handleBack();
         }
         break;
-      case "#":
+      case "\r":
         if (this.currentScreen === "rastreabilidade") {
           // ação de pausar
           this.pausarRastreabilidade();
