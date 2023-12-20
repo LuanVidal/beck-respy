@@ -537,7 +537,7 @@ class ScreenManager {
     this.changeScreenTo(this.getNextScreen());
   }
 
-  handleCharacter(key) {
+handleCharacter(key) {
     console.log("Current Screen:", this.currentScreen);
 
     // Lista de telas que não devem aceitar números
@@ -556,10 +556,12 @@ class ScreenManager {
         consumivel: 2,
     };
 
+    // Inicializa a propriedade se não estiver definida
+    this[this.currentScreen] = this[this.currentScreen] || '';
+
     // Verifica se a propriedade está definida antes de acessá-la
     if (
         this.currentScreen &&
-        this[this.currentScreen] &&
         this[this.currentScreen].length < maxDigits[this.currentScreen]
     ) {
         this[this.currentScreen] += key;

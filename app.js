@@ -35,14 +35,14 @@ http.listen(port, async () => {
   const browser = await puppeteer.launch({
     executablePath: "/usr/bin/chromium-browser",
     headless: false,
-    args: ["--start-fullscreen",
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-infobars",
-    "--start-maximized",
-    "--app=http://localhost:3000/",
-    "--user-data-dir=/tmp/puppeteer_user_data",
-    "--disable-blink-features=AutomationControlled",],
+    args: ['--start-fullscreen',
+    '--disable-gpu',
+    '--disable-infobars',
+    '--start-maximized',
+    '--app=http://localhost:3000/',
+    '--user-data-dir=/tmp/puppeteer_user_data',],
+
+    ignoreDefaultArgs: ['--enable-automation'],
   });
 
 });
