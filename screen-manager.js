@@ -75,7 +75,9 @@ class ScreenManager {
               this.io.emit("changepath", "rastreabilidade");
             } else {
               console.error("Erro na requisição:", this.lastError);
-              this.showPopup("ERRO", this.lastError.error, "error");
+              
+              const errorMessage = this.lastError && this.lastError.error ? this.lastError.error : (this.lastError ? this.lastError.toString() : "Erro desconhecido");
+              this.showPopup("ERRO", errorMessage, "error");
 
               this.resetVariables();
 
@@ -100,26 +102,21 @@ class ScreenManager {
       rastreabilidade: {
         action: () => {
           this.sendDataToServer("telaRastreabilidade", "telaRastreabilidade");
-          this.sendDataToServer("parameters", { Corrente: this.data.correnteAnterior, Tensao: this.data.tensaoAnterior });
+        this.sendDataToServer("parameters", { Corrente: this.data.correnteAnterior, Tensao: this.data.tensaoAnterior });
 
-          // Verifica se há um intervalo existente e o limpa
-          if (this.intervalId) {
-            clearInterval(this.intervalId);
-          }
+        // Verifica se há um intervalo existente e o limpa
+        if (this.intervalId) {
+          clearInterval(this.intervalId);
+        }
 
-          // Configura o temporizador para enviar dados a cada segundo
-          this.intervalId = setInterval(() => {
-            if (this.currentScreen === "pausa") {
-              // Se a tela atual for 'pausa', interrompe o temporizador
-              clearInterval(this.intervalId);
-            } else {
-              // Envia os dados atualizados
-              this.io.emit("parameters", {
-                Corrente: this.data.correnteAnterior,
-                Tensao: this.data.tensaoAnterior,
-              });
-            }
-          }, 1000);
+        // Reinicia o temporizador após a pausa
+        this.intervalId = setInterval(() => {
+          // Envia os dados atualizados
+          this.io.emit("parameters", {
+            Corrente: this.data.correnteAnterior,
+            Tensao: this.data.tensaoAnterior,
+          });
+        }, 500);
         },
       },
       finaliza: {
@@ -560,13 +557,14 @@ handleCharacter(key) {
     this[this.currentScreen] = this[this.currentScreen] || '';
 
     // Verifica se a propriedade está definida antes de acessá-la
-    if (
-        this.currentScreen &&
-        this[this.currentScreen].length < maxDigits[this.currentScreen]
-    ) {
-        this[this.currentScreen] += key;
-        this.screens[this.currentScreen].action();
+    if (this.currentScreen && this[this.currentScreen].length < maxDigits[this.currentScreen]) {
+        // Verifica se o caractere é um número
+        if (!isNaN(Number(key))) {
+            this[this.currentScreen] += key;
+            this.screens[this.currentScreen].action();
+        }
     }
+
     this.logVariableValues(); // Mostra os valores após a modificação
 }
 
